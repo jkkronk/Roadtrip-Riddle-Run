@@ -77,7 +77,7 @@ def get_coordinates_from_city(city):
 
 
 def main():
-    api_key = 'AIzaSyAgjDUz41LJBVJD_6ZV3JF35xhdPQ18w_4'  # Replace with your Google Street View API key
+    api_key = ''  # Replace with your Google Street View API key
     city = "New York City"  # Replace with your starting city
 
     destination = get_coordinates_from_city(city)
