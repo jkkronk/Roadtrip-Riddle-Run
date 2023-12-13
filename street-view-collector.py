@@ -1,15 +1,56 @@
 import google_streetview.api
-import random
 import moviepy.editor as mpy
 import requests
+import polyline
+import math
+from PIL import Image
+import numpy as np
+from io import BytesIO
 
+def is_gray_image(image_data):
+    """Check if the image is predominantly gray."""
+    image = Image.open(BytesIO(image_data))
+    np_image = np.array(image)
 
-def get_path_coordinates(start_location, destination, api_key, num_points=10):
+    # Calculate the standard deviation of the color channels
+    std_dev = np_image.std(axis=(0, 1))
+    return all(x < 20 for x in std_dev)  # Threshold for grayness, might need adjustment
+
+def calculate_heading(lat1, lng1, lat2, lng2):
+    # Convert degrees to radians
+    lat1, lng1, lat2, lng2 = map(math.radians, [lat1, lng1, lat2, lng2])
+
+    # Calculate the change in coordinates
+    delta_lng = lng2 - lng1
+
+    # Calculate the heading
+    x = math.sin(delta_lng) * math.cos(lat2)
+    y = math.cos(lat1) * math.sin(lat2) - (math.sin(lat1) * math.cos(lat2) * math.cos(delta_lng))
+    heading = math.atan2(x, y)
+
+    # Convert heading to degrees and adjust to compass heading
+    heading = math.degrees(heading)
+    heading = (heading + 360) % 360
+    return heading
+def get_path_coordinates(destination, start_location="", api_key="", num_points=10):
+    destination_coord = get_coordinates_from_city(destination)
+
+    if(start_location == ""):
+        # Randomly generate a start location
+        lat_random = np.random.uniform(-1, 1)
+        lng_random = np.random.uniform(-1, 1)
+        start_coord = destination_coord[0] + lat_random , destination_coord[1] + lng_random  # Slightly offset the start location
+    else:
+        start_coord = get_coordinates_from_city(start_location)
+
+    print(f"Start Location: {start_coord}")
+    print(f"\nDestination: {destination_coord}")
+
     # Set up the request to the Google Directions API
     base_url = "https://maps.googleapis.com/maps/api/directions/json"
     params = {
-        'origin': f'{start_location[0]},{start_location[1]}',
-        'destination': f'{destination[0]},{destination[1]}',
+        'origin': f'{start_coord[0]},{start_coord[1]}',
+        'destination': f'{destination_coord[0]},{destination_coord[1]}',
         'key': api_key
     }
 
@@ -23,39 +64,61 @@ def get_path_coordinates(start_location, destination, api_key, num_points=10):
     if not directions['routes']:
         raise ValueError("No routes found for the given locations.")
 
-    # Extract the steps in the route
-    steps = directions['routes'][0]['legs'][0]['steps']
+    # Extract the polyline from the first route
+    encoded_polyline = directions['routes'][0]['overview_polyline']['points']
 
-    # Get coordinates from the steps
+    # Decode the polyline
+    full_path = polyline.decode(encoded_polyline)
+
+    # Select evenly spaced points from the path
     path_coordinates = []
-    for step in steps:
+    for i in range(0, min(num_points, len(full_path))):
+        path_coordinates.append(full_path[i])
 
-        path_coordinates.append((step['start_location']['lat'], step['start_location']['lng']))
-        if len(path_coordinates) >= num_points:
-            break
-
-    # Fill up remaining points if needed
+    # Trim or extend the list to match the desired number of points
+    if len(path_coordinates) > num_points:
+        path_coordinates = path_coordinates[:num_points]
     while len(path_coordinates) < num_points:
         path_coordinates.append(path_coordinates[-1])
 
     return path_coordinates
 def fetch_street_view_images(api_key, path_coordinates):
     images = []
-    for lat, lng in path_coordinates:
+
+    for i in range(len(path_coordinates) - 1):
+        lat, lng = path_coordinates[i]
+        next_lat, next_lng = path_coordinates[i + 1]
+
+        # Calculate heading towards the next point
+        heading = calculate_heading(lat, lng, next_lat, next_lng)
+
         params = [{
             'size': '600x300',  # Image size
             'location': f'{lat},{lng}',
-            'heading': '0',  # Adjust if needed to face the direction of the path
+            'heading': heading,  # Adjust if needed to face the direction of the path
             'pitch': '0',
             #'source': 'outdoor',  # Outdoor images only
             'key': api_key
         }]
         results = google_streetview.api.results(params)
-        images.append(results.links[0])
+
+        # Download the image
+        response = requests.get(results.links[0])
+        if response.status_code == 200:
+            image_data = response.content
+            if not is_gray_image(image_data):
+                images.append(image_data)
+
     return images
 
 def create_stop_motion(images, output_file='data/stop_motion_movie.mp4'):
-    clips = [mpy.ImageClip(image).set_duration(0.2) for image in images]  # 0.2 seconds per image
+    clips = []
+    for image_data in images:
+        with Image.open(BytesIO(image_data)) as img:
+            np_image = np.array(img)
+            clip = mpy.ImageClip(np_image).set_duration(0.2)  # 0.2 seconds per image
+            clips.append(clip)
+
     movie = mpy.concatenate_videoclips(clips, method="compose")
     movie.write_videofile(output_file, fps=24)
 
@@ -78,24 +141,20 @@ def get_coordinates_from_city(city):
 
 def main():
     api_key = ''  # Replace with your Google Street View API key
-    city = "New York City"  # Replace with your starting city
+    city = "Zurich"  # Replace with your starting city
 
-    destination = get_coordinates_from_city(city)
-    start = destination[0], destination[1] - 1  # Slightly offset the start location
-    print(f"Start Location: {start}")
-    print(f"\nDestination: {destination}")
-    path_coordinates = get_path_coordinates(start, destination, api_key, num_points=1000)
-    images_url = fetch_street_view_images(api_key, path_coordinates)
+    path_coordinates = get_path_coordinates(city, "", api_key, 200)
 
-    images = []
-    for i, img in enumerate(images_url):
-        # save image to data folder
-        img = requests.get(img)
-        images.append('data/img_' + str(i) + '.jpg')
-        with open('data/img_' + str(i) + '.jpg', 'wb') as f:
-            f.write(img.content)
+    if len(path_coordinates) < 10:
+        raise ValueError("Too few or no images found for the given city.")
 
-    create_stop_motion(images)
+    images = fetch_street_view_images(api_key, path_coordinates)
+    # Check if there was images returned. If not, return an error.
+    if len(images) < 10:
+        raise ValueError("Too few or no images found for the given city.")
+
+
+    create_stop_motion(images, 'data/stop_motion_' + city + '.mp4')
 
 if __name__ == "__main__":
     main()
