@@ -2,11 +2,12 @@ import quiz
 import audio
 import asyncio
 from street_view_collector import get_path_coordinates, fetch_street_view_images, create_stop_motion
+import argparse
 
-def main():
-    openai_api_key = "sk-..."  # Replace with your OpenAI View API key
-    google_api_key = "..." # Replace with your Google Street View API key
-    city = "Zurich"  # Replace with your starting city
+def main(args):
+    openai_api_key = args.openai_api_key
+    google_api_key = args.google_api_key
+    city = args.city
     host_voice = "nova"
 
     city_quiz = quiz.create_quiz(city, openai_api_key)
@@ -34,4 +35,10 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    parser = argparse.ArgumentParser()
+    parser.add_argument("openai_api_key", help="OpenAI API key") #"sk-..."
+    parser.add_argument("google_api_key", help="Google API key")
+    parser.add_argument("city", help="City to generate quiz for")
+    args = parser.parse_args()
+
+    main(args)
