@@ -111,7 +111,7 @@ def fetch_street_view_images(api_key, path_coordinates):
 
     return images
 
-def create_stop_motion(images, output_file='data/stop_motion_movie.mp4'):
+def create_stop_motion(images, output_file='data/stop_motion_movie.mp4', audio_file=None):
     clips = []
     for image_data in images:
         with Image.open(BytesIO(image_data)) as img:
@@ -120,6 +120,9 @@ def create_stop_motion(images, output_file='data/stop_motion_movie.mp4'):
             clips.append(clip)
 
     movie = mpy.concatenate_videoclips(clips, method="compose")
+    if audio_file:
+        audio = mpy.AudioFileClip(audio_file)
+        movie = movie.set_audio(audio)
     movie.write_videofile(output_file, fps=24)
 
 def get_coordinates_from_city(city):
@@ -137,25 +140,3 @@ def get_coordinates_from_city(city):
             raise ValueError("No results found for the given city.")
     else:
         raise ConnectionError("Failed to connect to the Nominatim API.")
-
-
-def main():
-    api_key = ''  # Replace with your Google Street View API key
-    city = "Zurich"  # Replace with your starting city
-
-    path_coordinates = get_path_coordinates(city, "", api_key, 200)
-
-    if len(path_coordinates) < 10:
-        raise ValueError("Too few or no images found for the given city.")
-
-    images = fetch_street_view_images(api_key, path_coordinates)
-    # Check if there was images returned. If not, return an error.
-    if len(images) < 10:
-        raise ValueError("Too few or no images found for the given city.")
-
-
-    create_stop_motion(images, 'data/stop_motion_' + city + '.mp4')
-
-if __name__ == "__main__":
-    main()
-
