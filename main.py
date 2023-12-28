@@ -29,7 +29,7 @@ def main(args):
     path_coordinates = get_path_coordinates(city, "", google_api_key, num_points)
     if len(path_coordinates) < 10:
         raise ValueError("Too few or no images found for the given city.")
-    images = fetch_street_view_images(google_api_key, path_coordinates)
+    images = fetch_street_view_images(google_api_key, path_coordinates, args.view)
     if len(images) < 10:
         raise ValueError("Too few or no images found for the given city.")
 
@@ -41,6 +41,7 @@ if __name__ == "__main__":
     parser.add_argument("openai_api_key", help="OpenAI API key") #"sk-..."
     parser.add_argument("google_api_key", help="Google API key")
     parser.add_argument("city", help="City to generate quiz for")
+    parser.add_argument("view", help="Video for mobile or desktop", choices=["mobile", "desktop"], default="mobile")
     args = parser.parse_args()
 
     main(args)

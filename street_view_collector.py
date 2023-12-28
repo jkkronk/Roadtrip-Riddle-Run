@@ -78,8 +78,10 @@ def get_path_coordinates(destination, start_location="", api_key="", num_points=
         path_coordinates.append(path_coordinates[-1])
 
     return path_coordinates
-def fetch_street_view_images(api_key, path_coordinates):
+def fetch_street_view_images(api_key, path_coordinates, view="mobile"):
     images = []
+
+    size = "390x640" if view == "mobile" else "630x400"
 
     for i in range(len(path_coordinates) - 1):
         lat, lng = path_coordinates[i]
@@ -89,14 +91,14 @@ def fetch_street_view_images(api_key, path_coordinates):
         heading = calculate_heading(lat, lng, next_lat, next_lng)
 
         params = [{
-            'size': '390x640',  # Image size
-            'fov': '120',  # Field of view
-            'radius': '100',  # How far away from the location to capture
-            'location': f'{lat},{lng}',
-            'heading': heading,  # Adjust if needed to face the direction of the path
-            'pitch': '0',
-            'source': 'outdoor',  # Outdoor images only
-            'key': api_key
+            "size": size,  # Image size
+            "fov": "120",  # Field of view
+            "radius": "100",  # How far away from the location to capture
+            "location": f"{lat},{lng}",
+            "heading": heading,  # Adjust if needed to face the direction of the path
+            "pitch": "0",
+            "source": "outdoor",  # Outdoor images only
+            "key": api_key
         }]
         results = google_streetview.api.results(params)
 
