@@ -11,30 +11,26 @@ def main(args):
     city = args.city
     host_voice = "echo"
 
+    print("Generating quiz...")
     city_quiz = quiz.create_quiz(city, openai_api_key)
-    print("\n CLUES: " + city_quiz.get_all_clues())
-    print("\n Explanations: " + city_quiz.get_all_explanation())
+    city_quiz.save(f"./data/{city}.json")
+    print("\n\nClues: " + city_quiz.get_all_clues())
+    print("\n\nExplanations: " + city_quiz.get_all_explanation())
 
-    print("Generating audio...")
+    print("\nGenerating audio...")
     sound = asyncio.run(audio.quiz_2_speech_openai(city_quiz, host_voice, openai_api_key))
     host = quiz.QuizHost("What city is our destination?...", f"... And the correct answer is... {city}")
     sound_intro = asyncio.run(audio.text_2_speech_openai(host.intro, host_voice, openai_api_key))
-
     sound = sound_intro + sound
     sound.export(f"./data/{city}.mp3", format="mp3")
 
+    print("\nGenerating video...")
     duration = sound.duration_seconds
     num_points = duration_to_num_points(duration)
-
     path_coordinates = get_path_coordinates(city, "", google_api_key, num_points)
-    if len(path_coordinates) < 10:
-        raise ValueError("Too few or no images found for the given city.")
     images = fetch_street_view_images(google_api_key, path_coordinates, args.view)
-    if len(images) < 10:
-        raise ValueError("Too few or no images found for the given city.")
-
     movie = images_to_video(images, f"./data/{city}.mp3")
-    movie.write_videofile(f"data/{city}.mp4", fps=24)
+    movie.write_videofile(f"data/{city}_{args.view}.mp4", fps=24)
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
