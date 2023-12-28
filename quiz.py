@@ -1,6 +1,7 @@
 from pydantic import BaseModel, Field
 from openai import OpenAI
 import instructor
+import json
 
 class QuizHost():
     intro: str = Field(..., description="The introduction of the quiz.")
@@ -30,6 +31,19 @@ class QuizClues(BaseModel):
     def get_all_explanation(self) -> str:
         return "\n".join(self.explanations)
 
+    def save(self, file_path: str):
+        data = {
+            "clues": self.clues,
+            "explanations": self.explanations
+        }
+        with open(file_path, 'w') as file:
+            json.dump(data, file)
+
+    @classmethod
+    def open(cls, file_path: str):
+        with open(file_path, 'r') as file:
+            data = json.load(file)
+            return cls(clues=data['clues'], explanations=data['explanations'])
 
 def create_quiz(city: str, openai_api_key) -> QuizClues:
     client = instructor.patch(OpenAI(api_key=openai_api_key))
