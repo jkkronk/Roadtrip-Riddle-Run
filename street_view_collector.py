@@ -1,9 +1,11 @@
+import math
 import google_streetview.api
 import requests
 import polyline
 import numpy as np
 from io import BytesIO
 from video import is_gray_image
+from PIL import Image
 
 def calculate_heading(lat1, lng1, lat2, lng2):
     # Convert degrees to radians
@@ -87,7 +89,9 @@ def fetch_street_view_images(api_key, path_coordinates):
         heading = calculate_heading(lat, lng, next_lat, next_lng)
 
         params = [{
-            'size': '400x400',  # Image size
+            'size': '390x640',  # Image size
+            'fov': '120',  # Field of view
+            'radius': '100',  # How far away from the location to capture
             'location': f'{lat},{lng}',
             'heading': heading,  # Adjust if needed to face the direction of the path
             'pitch': '0',

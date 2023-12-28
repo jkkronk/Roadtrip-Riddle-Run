@@ -1,59 +1,44 @@
 from io import BytesIO
-from PIL import Image
+from PIL import Image, ImageFont, ImageDraw
 import numpy as np
 import moviepy.editor as mpy
 
-
-def crop_to_mobile_format(images):
-    # This function should crop all images to the correct aspect ratio for TikTok/Instagram
-    # There should be no black bars on the sides of the image
-    # The image should be cropped from the top and bottom if necessary
-    cropped_images = []
-    for img in images:
-        # Define the dimensions for TikTok/Instagram mobile format (e.g., 9:16 aspect ratio)
-        target_width = img.width
-        target_height = int(target_width * 16 / 9)  # Assuming 9:16 aspect ratio
-
-        # Calculate cropping dimensions
-        left = 0
-        if img.height < target_height:
-            # If image height is smaller than the target height, adjust dimensions
-            target_height = img.height
-            top = 0
-        else:
-            top = (img.height - target_height) // 2  # Use floor division to get an integer value
-
-        right = img.width
-        bottom = top + target_height
-
-        # Crop the image
-        cropped_img = img.crop((left, top, right, bottom))
-
-        # Resize the image to ensure it fits TikTok/Instagram format
-        cropped_img = cropped_img.resize((target_width, target_height))
-
-        # Append the cropped and resized image to the list
-        cropped_images.append(cropped_img)
-
-    return cropped_images
-
-
 def crop_bottom_pixels(images, pixels=10):
     cropped_images = []
-    for img in images:
-        width, height = img.size
-        cropped_img = img.crop((0, 0, width, height - pixels))
+    for image in images:
+        width, height = image.size
+        cropped_img = image.crop((0, 0, width, height - pixels))
         cropped_images.append(cropped_img)
     return cropped_images
 
-def images_to_video(images, audio_file=None, image_duration = 0.4, crop_bottom=True, crop_mobile_format=True):
+
+def add_logo_on_top(images):
+    logo = Image.open("./data/logo.png")
+    logo_width, logo_height = logo.size
+    # Resize the logo to be a bit smaller than the width of the first image in the list
+    base_width, base_height = images[0].size
+    logo_width = min(base_width - 20, logo_width)  # Adjust 20 to the desired smaller size
+    logo_height = int((logo_width / logo.size[0]) * logo.size[1])
+    logo = logo.resize((logo_width, logo_height), Image.LANCZOS)
+
+    images_with_logo = []
+    for image in images:
+        # Calculate the position to place the top image
+        position = ((base_width - logo_width) // 2, (base_height // 3) - (logo_height // 3))
+
+        # Paste the top image on the base image
+        image.paste(logo, position, logo)
+        images_with_logo.append(image)
+    return images_with_logo
+
+def images_to_video(images, audio_file=None, image_duration = 0.4, crop_bottom=True, text_to_add=True):
     global audio
     clips = []
 
     if crop_bottom:
-        images = crop_bottom_pixels(images, pixels=10)
-    if crop_mobile_format:
-        images = crop_to_mobile_format(images)
+        images = crop_bottom_pixels(images, pixels=30)
+    if text_to_add != "":
+        images = add_logo_on_top(images)
 
     # If audio is provided and its duration is shorter than the total image duration, cut excess frames
     if audio_file:

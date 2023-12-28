@@ -19,13 +19,13 @@ def main(args):
     sound = asyncio.run(audio.quiz_2_speech_openai(city_quiz, host_voice, openai_api_key))
     host = quiz.QuizHost("What city is our destination?...", f"... And the correct answer is... {city}")
     sound_intro = asyncio.run(audio.text_2_speech_openai(host.intro, host_voice, openai_api_key))
-    #sound_outro = asyncio.run(audio.text_2_speech_openai(host.outro, host_voice, openai_api_key))
 
-    sound = sound_intro + sound #+ sound_outro
+    sound = sound_intro + sound
     sound.export(f"./data/{city}.mp3", format="mp3")
 
     duration = sound.duration_seconds
     num_points = duration_to_num_points(duration)
+
     path_coordinates = get_path_coordinates(city, "", google_api_key, num_points)
     if len(path_coordinates) < 10:
         raise ValueError("Too few or no images found for the given city.")
