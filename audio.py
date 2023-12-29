@@ -47,7 +47,7 @@ async def quiz_2_speech_openai(quiz, voice, openai_api_key):
     concatenated_audio = AudioSegment.empty()  # Creating an empty audio segment
     for chunk_audio in chunk_audios:
         concatenated_audio += chunk_audio
-        concatenated_audio += AudioSegment.silent(duration=250)
+        concatenated_audio += AudioSegment.silent(duration=500)
 
         # Export concatenated audio to a file
         with NamedTemporaryFile(suffix=".mp3", delete=True) as temp_file:

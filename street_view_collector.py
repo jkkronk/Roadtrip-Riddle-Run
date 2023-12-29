@@ -1,20 +1,11 @@
+import math
 import google_streetview.api
-import moviepy.editor as mpy
 import requests
 import polyline
-import math
-from PIL import Image
 import numpy as np
 from io import BytesIO
-
-def is_gray_image(image_data):
-    """Check if the image is predominantly gray."""
-    image = Image.open(BytesIO(image_data))
-    np_image = np.array(image)
-
-    # Calculate the standard deviation of the color channels
-    std_dev = np_image.std(axis=(0, 1))
-    return all(x < 20 for x in std_dev)  # Threshold for grayness, might need adjustment
+from video import is_gray_image
+from PIL import Image
 
 def calculate_heading(lat1, lng1, lat2, lng2):
     # Convert degrees to radians
@@ -32,6 +23,11 @@ def calculate_heading(lat1, lng1, lat2, lng2):
     heading = math.degrees(heading)
     heading = (heading + 360) % 360
     return heading
+
+def duration_to_num_points(duration, image_duration=0.4):
+    num_points = int(duration / image_duration) + 10  # Add 5 points to ensure enough images
+    return num_points
+
 def get_path_coordinates(destination, start_location="", api_key="", num_points=10):
     destination_coord = get_coordinates_from_city(destination)
 
@@ -82,8 +78,10 @@ def get_path_coordinates(destination, start_location="", api_key="", num_points=
         path_coordinates.append(path_coordinates[-1])
 
     return path_coordinates
-def fetch_street_view_images(api_key, path_coordinates):
+def fetch_street_view_images(api_key, path_coordinates, view="mobile"):
     images = []
+
+    size = "390x640" if view == "mobile" else "630x400"
 
     for i in range(len(path_coordinates) - 1):
         lat, lng = path_coordinates[i]
@@ -93,12 +91,14 @@ def fetch_street_view_images(api_key, path_coordinates):
         heading = calculate_heading(lat, lng, next_lat, next_lng)
 
         params = [{
-            'size': '600x300',  # Image size
-            'location': f'{lat},{lng}',
-            'heading': heading,  # Adjust if needed to face the direction of the path
-            'pitch': '0',
-            #'source': 'outdoor',  # Outdoor images only
-            'key': api_key
+            "size": size,  # Image size
+            "fov": "120",  # Field of view
+            "radius": "100",  # How far away from the location to capture
+            "location": f"{lat},{lng}",
+            "heading": heading,  # Adjust if needed to face the direction of the path
+            "pitch": "0",
+            "source": "outdoor",  # Outdoor images only
+            "key": api_key
         }]
         results = google_streetview.api.results(params)
 
@@ -107,23 +107,10 @@ def fetch_street_view_images(api_key, path_coordinates):
         if response.status_code == 200:
             image_data = response.content
             if not is_gray_image(image_data):
-                images.append(image_data)
+                img = Image.open(BytesIO(image_data))
+                images.append(img)
 
     return images
-
-def create_stop_motion(images, output_file='data/stop_motion_movie.mp4', audio_file=None):
-    clips = []
-    for image_data in images:
-        with Image.open(BytesIO(image_data)) as img:
-            np_image = np.array(img)
-            clip = mpy.ImageClip(np_image).set_duration(0.2)  # 0.2 seconds per image
-            clips.append(clip)
-
-    movie = mpy.concatenate_videoclips(clips, method="compose")
-    if audio_file:
-        audio = mpy.AudioFileClip(audio_file)
-        movie = movie.set_audio(audio)
-    movie.write_videofile(output_file, fps=24)
 
 def get_coordinates_from_city(city):
     base_url = "https://nominatim.openstreetmap.org/search"
