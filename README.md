@@ -1,16 +1,20 @@
 # Roadtrip-Riddle-Run
-Do your own på spåret game show! 
+Create a video quiz game that uses Google Street View and OpenAI's GPT-4 to guess the location a trip in of street view 
+images.
 
-**WIP**
+You will need to set your own API keys for Google Street View and OpenAI's GPT service.
 
-## Requirements
-
-## Installation
+## Installation / Requirements
+```angular2html
+pip install -r requirements.txt
+export OPENAI_API_KEY=sk-...
+export GOOGLE_API_KEY=...
+```
 
 ## Usage
-Run main.py with the following arguments:
+Run main.py:
 ```bash
-python main.py "openai_api_key" "google_streetview_api_key" "destination_city"
+python main.py "city location" "data folder path"
 ```
 
 Have fun!
