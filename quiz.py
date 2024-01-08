@@ -1,7 +1,10 @@
+import os.path
+
 from pydantic import BaseModel, Field
 from openai import OpenAI
 import instructor
 import json
+import random
 
 class QuizHost():
     intro: str = Field(..., description="The introduction of the quiz.")
@@ -31,8 +34,9 @@ class QuizClues(BaseModel):
     def get_all_explanation(self) -> str:
         return "\n".join(self.explanations)
 
-    def save(self, file_path: str):
+    def save(self, city, file_path: str):
         data = {
+            "city": city,
             "clues": self.clues,
             "explanations": self.explanations
         }
@@ -45,8 +49,28 @@ class QuizClues(BaseModel):
             data = json.load(file)
             return cls(clues=data['clues'], explanations=data['explanations'])
 
-def create_quiz(city: str, openai_api_key) -> QuizClues:
-    client = instructor.patch(OpenAI(api_key=openai_api_key))
+def random_destination(data_path) -> str:
+    # open the cities text file and pick a random city
+    # return the city
+    path_to_cities = os.path.join(data_path, "cities.txt")
+
+    # Opening the file
+    with open(path_to_cities, 'r') as file:
+        cities_text = file.read()
+
+    # Splitting the text into a list of cities
+    cities_list = cities_text.split(',')
+
+    # Selecting a random city from the list
+    random_city = random.choice(cities_list)
+
+    return random_city.replace("\n", "")
+
+def create_quiz(city:str, openai_api_key="") -> QuizClues:
+    if openai_api_key == "":
+        client = instructor.patch(OpenAI())
+    else:
+        client = instructor.patch(OpenAI(api_key=openai_api_key))
 
     prompt = f"""
                 You are a quiz host and you are hosting a quiz where the answer is {city}. You are suppose to come up

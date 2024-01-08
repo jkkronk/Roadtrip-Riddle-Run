@@ -1,10 +1,10 @@
 from openai import OpenAI, AsyncOpenAI
-import instructor
 from pathlib import Path
 from tempfile import NamedTemporaryFile
 import asyncio
 from pydub import AudioSegment
 import os
+
 
 async def generate_audio_chunk(client, voice, chunk, nr):
     response = await client.audio.speech.create(
@@ -20,8 +20,13 @@ async def generate_audio_chunk(client, voice, chunk, nr):
     os.remove(temp_file_path)
     return chunk_audio
 
-async def quiz_2_speech_openai(quiz, voice, openai_api_key):
-    client = AsyncOpenAI(api_key=openai_api_key)
+
+async def quiz_2_speech_openai(quiz, voice, openai_api_key=""):
+    if openai_api_key == "":
+        client = AsyncOpenAI()
+    else:
+        client = AsyncOpenAI(api_key=openai_api_key)
+
     speech_file_path = Path(__file__).parent / "speech.mp3"
 
     print(f"Generating audio for voice {voice}, to file {speech_file_path}")
@@ -59,8 +64,13 @@ async def quiz_2_speech_openai(quiz, voice, openai_api_key):
 
     return concatenated_audio
 
-async def text_2_speech_openai(text, voice, openai_api_key):
-    client = AsyncOpenAI(api_key=openai_api_key)
+
+async def text_2_speech_openai(text, voice, openai_api_key=""):
+    if openai_api_key == "":
+        client = AsyncOpenAI()
+    else:
+        client = AsyncOpenAI(api_key=openai_api_key)
+
     speech_file_path = Path(__file__).parent / "speech.mp3"
 
     print(f"Generating audio for voice {voice}, to file {speech_file_path}")

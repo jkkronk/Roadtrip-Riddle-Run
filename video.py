@@ -31,20 +31,20 @@ def add_logo_on_top(images):
         images_with_logo.append(image)
     return images_with_logo
 
-def images_to_video(images, audio_file=None, image_duration = 0.4, crop_bottom=True, text_to_add=True):
+def images_to_video(images, audio_file=None, image_duration = 0.4, crop_bottom=True, add_logo=True):
     global audio
     clips = []
 
     if crop_bottom:
         images = crop_bottom_pixels(images, pixels=30)
-    if text_to_add != "":
+    if add_logo:
         images = add_logo_on_top(images)
 
     # If audio is provided and its duration is shorter than the total image duration, cut excess frames
     if audio_file:
         audio = mpy.AudioFileClip(audio_file)
         audio_duration = audio.duration
-
+        print("Audio duration:", audio_duration)
         if audio_duration < len(images) * image_duration:
             # Calculate number of frames to keep based on audio duration
             frames_to_keep = int(audio_duration / image_duration)
